@@ -1,0 +1,6 @@
+{
+  "name": "Tempeh Fermentation Monitoring",
+  "description": "A minimalist dashboard for monitoring temperature and humidity in tempeh storage boxes via HiveMQ MQTT.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
