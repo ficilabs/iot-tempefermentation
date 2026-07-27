@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Thermometer, Droplets, Activity, Settings, Radio, Sun, Moon, Lock, Unlock, X, Check, AlertCircle, Eye, EyeOff, Gauge } from 'lucide-react';
+import { Thermometer, Droplets, Activity, Settings, Radio, Sun, Moon, Lock, Unlock, X, Check, AlertCircle, Eye, EyeOff, Gauge, Fan, CloudRain, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea } from 'recharts';
 import { createMqttClient, topics } from './lib/mqtt';
@@ -20,8 +20,6 @@ interface TelemetryData {
 export default function App() {
   const [temp, setTemp] = useState<number | null>(null);
   const [humidity, setHumidity] = useState<number | null>(null);
-  const [pressure, setPressure] = useState<number | null>(null);
-  const [status, setStatus] = useState<string>('OFFLINE');
   const [setpoint, setSetpoint] = useState<number | null>(null);
   const [hysteresis, setHysteresis] = useState<number | null>(null);
   const [history, setHistory] = useState<TelemetryData[]>([]);
@@ -31,7 +29,6 @@ export default function App() {
   // MQTT publisher and secure parameter references
   const clientRef = useRef<any>(null);
   const humidityRef = useRef<number | null>(null);
-  const pressureRef = useRef<number | null>(null);
 
   // Secure Password Confirmation States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -130,6 +127,13 @@ export default function App() {
   const isInHysteresisZone = humidity !== null && setpoint !== null && lowerBound !== null && humidity >= lowerBound && humidity <= setpoint;
   const needsMoisture = humidity !== null && lowerBound !== null && humidity < lowerBound;
 
+  // Computed Statuses
+  const status = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Humidifier
+  const fanStatus = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Fan
+
+  // Lampu Pemanas computed status: ON when temp > setpoint, else OFF
+  const heaterStatus = temp !== null && setpoint !== null && temp > setpoint ? 'ON' : 'OFF';
+
   const handleMessage = useCallback((topic: string, message: string) => {
     const val = parseFloat(message);
     
@@ -138,20 +142,13 @@ export default function App() {
         setTemp(val);
         setHistory(prev => {
           const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          const newData = [...prev, { time: now, temp: val, humidity: humidityRef.current || 0, pressure: pressureRef.current || 0 }];
+          const newData = [...prev, { time: now, temp: val, humidity: humidityRef.current || 0 }];
           return newData.slice(-30);
         });
         break;
       case topics.humidity:
         setHumidity(val);
         humidityRef.current = val;
-        break;
-      case topics.pressure:
-        setPressure(val);
-        pressureRef.current = val;
-        break;
-      case topics.status:
-        setStatus(message);
         break;
       case topics.setpointSub:
         setSetpoint(val);
@@ -173,8 +170,8 @@ export default function App() {
       const subTopics = [
         topics.temperature,
         topics.humidity,
-        topics.pressure,
         topics.status,
+        topics.fan,
         topics.setpointSub,
         topics.hysteresisSub
       ];
@@ -321,38 +318,80 @@ export default function App() {
           </div>
         </div>
 
-        {/* Pressure Card */}
+        {/* Indicators Card */}
         <div className="lg:col-span-3 lg:row-span-3 bento-card flex flex-col justify-between group">
           <div className="flex justify-between items-start">
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Pressure</span>
-            <span className="text-pink-500 dark:text-pink-400 flex items-center gap-1 text-sm font-bold bg-pink-50 dark:bg-pink-950/30 px-2 py-1 rounded-lg">
-              Baro <Gauge className="w-3.5 h-3.5" />
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Indicators</span>
+            <span className="text-indigo-500 dark:text-indigo-400 flex items-center gap-1 text-sm font-bold bg-indigo-50 dark:bg-indigo-950/30 px-2 py-1 rounded-lg">
+              Actuators <Radio className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="flex items-baseline gap-2 my-8">
-            <motion.span 
-              key={pressure}
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="text-6xl xl:text-7xl font-black text-slate-900 dark:text-slate-50 tracking-tighter"
-            >
-              {pressure ? pressure.toFixed(1) : '--.-'}
-            </motion.span>
-            <span className="text-2xl font-bold text-slate-300 dark:text-slate-700 tracking-tighter">hPa</span>
-          </div>
-          <div className="w-full h-4 flex flex-col justify-between">
-            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-850 rounded-full relative overflow-hidden">
-              <motion.div 
-                initial={{ left: 0 }}
-                animate={{ 
-                  left: pressure ? `${Math.max(0, Math.min(100, ((pressure - 950) / 100) * 100))}%` : '50%' 
-                }}
-                className="absolute top-0 bottom-0 w-2.5 bg-pink-500 rounded-full -translate-x-1" 
-              />
+          
+          <div className="flex flex-col gap-4 my-auto mt-6">
+            {/* Fan Status */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
+                  fanStatus === 'ON' ? "bg-sky-100 text-sky-500 dark:bg-sky-900/30 dark:text-sky-400 shadow-[0_0_15px_rgba(14,165,233,0.3)]" : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                )}>
+                  <Fan className={cn("w-5 h-5", fanStatus === 'ON' && "animate-spin")} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Kipas (Fan)</h4>
+                  <p className="text-xs font-medium text-slate-500">{fanStatus === 'ON' ? 'Active' : 'Standby'}</p>
+                </div>
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                fanStatus === 'ON' ? "bg-sky-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+              )}>
+                {fanStatus}
+              </div>
             </div>
-            <div className="flex justify-between text-[8px] font-bold text-slate-400 dark:text-slate-600 mt-1 uppercase tracking-wide">
-              <span>950 hPa</span>
-              <span>1050 hPa</span>
+
+            {/* Humidifier Status */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
+                  status === 'ON' ? "bg-emerald-100 text-emerald-500 dark:bg-emerald-900/30 dark:text-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.3)]" : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                )}>
+                  <CloudRain className={cn("w-5 h-5", status === 'ON' && "animate-pulse")} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Humidifier</h4>
+                  <p className="text-xs font-medium text-slate-500">{status === 'ON' ? 'Active' : 'Standby'}</p>
+                </div>
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                status === 'ON' ? "bg-emerald-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+              )}>
+                {status}
+              </div>
+            </div>
+
+            {/* Heater Status */}
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
+                  heaterStatus === 'ON' ? "bg-red-100 text-red-500 dark:bg-red-900/30 dark:text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]" : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                )}>
+                  <Flame className={cn("w-5 h-5", heaterStatus === 'ON' && "animate-pulse")} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">Lampu Pemanas</h4>
+                  <p className="text-xs font-medium text-slate-500">{heaterStatus === 'ON' ? 'Active' : 'Standby'}</p>
+                </div>
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                heaterStatus === 'ON' ? "bg-red-500 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+              )}>
+                {heaterStatus}
+              </div>
             </div>
           </div>
         </div>

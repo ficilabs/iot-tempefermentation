@@ -12,6 +12,7 @@ export const topics = {
   hysteresisSub: "faqih2026/hysteresis",
   setpointPub: "faqih2026/control/setpoint",
   hysteresisPub: "faqih2026/control/hysteresis",
+  fan: "faqih2026/fan",
 };
 
 export const createMqttClient = () => {
