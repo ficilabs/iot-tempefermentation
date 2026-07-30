@@ -131,8 +131,8 @@ export default function App() {
   const status = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Humidifier
   const fanStatus = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Fan
 
-  // Lampu Pemanas computed status: ON when temp > setpoint, else OFF
-  const heaterStatus = temp !== null && setpoint !== null && temp > setpoint ? 'ON' : 'OFF';
+  // Lampu Pemanas computed status: ON when temp < setpoint, else OFF
+  const heaterStatus = temp !== null && setpoint !== null && temp < setpoint ? 'ON' : 'OFF';
 
   const handleMessage = useCallback((topic: string, message: string) => {
     const val = parseFloat(message);

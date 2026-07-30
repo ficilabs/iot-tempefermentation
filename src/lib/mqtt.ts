@@ -10,8 +10,8 @@ export const topics = {
   pressure: "faqih2026/pressure",
   setpointSub: "faqih2026/setpoint",
   hysteresisSub: "faqih2026/hysteresis",
-  setpointPub: "faqih2026/control/setpoint",
-  hysteresisPub: "faqih2026/control/hysteresis",
+  setpointPub: "faqih2026/setpoint",
+  hysteresisPub: "faqih2026/hysteresis",
   fan: "faqih2026/fan",
 };
 
