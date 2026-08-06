@@ -127,12 +127,12 @@ export default function App() {
   const isInHysteresisZone = humidity !== null && setpoint !== null && lowerBound !== null && humidity >= lowerBound && humidity <= setpoint;
   const needsMoisture = humidity !== null && lowerBound !== null && humidity < lowerBound;
 
-  // Computed Statuses
-  const status = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Humidifier
-  const fanStatus = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Fan
+// Computed Statuses
+const status = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Humidifier
+const fanStatus = humidity !== null && setpoint !== null && humidity < setpoint ? 'ON' : 'OFF'; // Fan
 
-  // Lampu Pemanas computed status: ON when temp < setpoint, else OFF
-  const heaterStatus = temp !== null && setpoint !== null && temp < setpoint ? 'ON' : 'OFF';
+// Lampu Pengering computed status: ON when humidity > setpoint (inverse of humidifier), else OFF
+const heaterStatus = humidity !== null && setpoint !== null && humidity > setpoint ? 'ON' : 'OFF';
 
   const handleMessage = useCallback((topic: string, message: string) => {
     const val = parseFloat(message);
